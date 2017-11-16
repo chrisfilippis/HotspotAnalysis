@@ -38,16 +38,24 @@ def get_spark_context():
     return SparkContext.getOrCreate(conf=configuration)
 
 
+def transform_column(data_frame, dt_col, col_type):
+    return data_frame\
+        .withColumn("new_id", data_frame[dt_col].cast(col_type,))\
+        .drop(dt_col).withColumnRenamed("new_id", dt_col)
+
+
 def transform_schema(data_frame):
-    return data_frame.withColumn("new_id", data_frame.id.cast("int",)).drop("id").withColumnRenamed("new_id", "id")
-
-
-def normalize_data(data_frame, input_col, output_col):
-    x = data_frame.toPandas()    # returns a numpy array
-    min_max_scaler = preprocessing.MinMaxScaler()
-    x_scaled = min_max_scaler.fit_transform(x)
-    data_frame = pandas.DataFrame(x_scaled)
+    data_frame = transform_column(data_frame, "id", "int")
+    data_frame = transform_column(data_frame, "lat", "double")
+    data_frame = transform_column(data_frame, "lon", "double")
     return data_frame
+
+
+def normalize_data(data_frame):
+    pandas_data_frame = data_frame.toPandas()
+    pandas_data_frame[['lat', 'lon']] = preprocessing.MinMaxScaler().fit_transform(pandas_data_frame[['lat', 'lon']])
+    return pandas_data_frame
+
 
 print "init"
 
@@ -62,9 +70,10 @@ df = transform_schema(df)
 
 print df.show()
 
-df = spk_session.createDataFrame(normalize_data(df, "id", "norm_id"))
+pandas_df = normalize_data(df)
+df = sqlContext.createDataFrame(pandas_df)
 
-print df.show()
+print df.take(20)
 
 # print newDf
 
