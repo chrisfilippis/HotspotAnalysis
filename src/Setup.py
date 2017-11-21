@@ -2,7 +2,9 @@ from pyspark import SparkConf, SparkContext
 from pyspark.sql import SparkSession
 from pyspark.sql import SQLContext
 from sklearn import preprocessing
+from sklearn.cluster import KMeans
 from pandas import *
+import math
 
 app_name = "Hot spot app"
 master = "local"
@@ -76,24 +78,40 @@ def testing():
     print df.take(20)
 
 
+def find_ceil_value(lat, step):
+    return math.ceil(lat/step)
+
+
+# a = np.zeros((5, 5, 5))
+# print a
+
+
+# decimal
+# places   degrees          distance
+# -------  -------          --------
+# 0        1                111  km
+# 1        0.1              11.1 km
+# 2        0.01             1.11 km
+# 3        0.001            111  m
+# 4        0.0001           11.1 m
+# 5        0.00001          1.11 m
+# 6        0.000001         11.1 cm
+# 7        0.0000001        1.11 cm
+# 8        0.00000001       1.11 mm
+
+
 sc = get_spark_context()
-a = np.zeros((5, 5, 5))
+spark = get_spark_session()
 
-print a
+step_lat = 0.01
+step_lon = 0.01
 
-intiSource = sc.textFile(csv_file_path)\
-    .map(lambda line: line.split(","))
+initSource = spark.read\
+    .option("header", "true")\
+    .csv(csv_file_path)
 
-print intiSource.count()
+rdd = initSource.rdd \
+    .map(lambda s: (int(s[0]), find_ceil_value(float(s[1]), step_lat), find_ceil_value(float(s[2]), step_lon), int(s[3])))
 
-# dfa = pandas.DataFrame(a)
-
-# print dfa
-
-# testing()
-# df.createOrReplaceTempView("points")
-
-# df.groupBy("id").count().show()
-# sqlDF = spark_session.sql("SELECT * FROM points WHERE id = 54265")
-# sqlDF.show()
-
+print "csv"
+print rdd.collect()
