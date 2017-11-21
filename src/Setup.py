@@ -57,28 +57,40 @@ def normalize_data(data_frame):
     return pandas_data_frame
 
 
-print "init"
+def testing():
+
+    sc = get_spark_context()
+    spk_session = get_spark_session()
+    sql_context = SQLContext(sc)
+
+    print "load data"
+
+    df = load_data(csv_file_path, spk_session, "csv")
+    df = transform_schema(df)
+
+    print df.show()
+
+    pandas_df = normalize_data(df)
+    df = sql_context.createDataFrame(pandas_df)
+
+    print df.take(20)
+
 
 sc = get_spark_context()
-spk_session = get_spark_session()
-sqlContext = SQLContext(sc)
+a = np.zeros((5, 5, 5))
 
-print "load data"
+print a
 
-df = load_data(csv_file_path, spk_session, "csv")
-df = transform_schema(df)
+intiSource = sc.textFile(csv_file_path)\
+    .map(lambda line: line.split(","))
 
-print df.show()
+print intiSource.count()
 
-pandas_df = normalize_data(df)
-df = sqlContext.createDataFrame(pandas_df)
+# dfa = pandas.DataFrame(a)
 
-print df.take(20)
+# print dfa
 
-# print newDf
-
-print "temp View"
-
+# testing()
 # df.createOrReplaceTempView("points")
 
 # df.groupBy("id").count().show()
