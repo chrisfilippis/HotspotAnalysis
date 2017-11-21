@@ -2,8 +2,16 @@ from pyspark import SparkConf, SparkContext
 from pyspark.sql import SparkSession
 from pyspark.sql import SQLContext
 from sklearn import preprocessing
+import math as math
 from SparkWrapper import *
-import Helpers as hlp
+
+
+def ceil_string_value(string_value, step):
+    return find_ceil_value(float(string_value), step)
+
+
+def find_ceil_value(lat, step):
+    return math.ceil(lat / step)
 
 # a = np.zeros((5, 5, 5))
 # print a
@@ -30,7 +38,7 @@ wrapper = SparkWrapper()
 initSource = wrapper.load_rdd(path=csv_file_path)
 
 rdd = initSource \
-    .map(lambda s: (int(s[0]), hlp.ceil_string_value(s[1], step_lat), hlp.ceil_string_value(s[2], step_lon), int(s[3])))
+    .map(lambda s: (int(s[0]), ceil_string_value(s[1], step_lat), ceil_string_value(s[2], step_lon), int(s[3])))
 
 print "csv"
 print rdd.collect()
