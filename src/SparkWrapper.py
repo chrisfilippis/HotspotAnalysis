@@ -8,7 +8,6 @@ class SparkWrapper(object):
 
     app_name = "Hot spot app"
     master = "local"
-    csv_file_path = "C:\Users\cfilip09\Desktop\d\\randomdata_small.csv"
 
     @staticmethod
     def get_spark_config():
@@ -16,7 +15,7 @@ class SparkWrapper(object):
             .setAppName(SparkWrapper.app_name)\
             .setMaster(SparkWrapper.master)
 
-    def load_data(self, path="C:\Users\cfilip09\Desktop\d\\randomdata.csv", spark_session=None, file_format="csv", delimiter=","):
+    def load_data_frame(self, path, spark_session=None, file_format="csv", delimiter=","):
         if spark_session is None:
             spark_session = self.get_spark_session()
 
@@ -26,11 +25,13 @@ class SparkWrapper(object):
             .load(path)
         return data_frame
 
-    @staticmethod
-    def get_spark_session():
+    def load_rdd(self, path, spark_session=None, file_format="csv", delimiter=","):
+        return self.load_data_frame(path, spark_session, file_format, delimiter).rdd
+
+    def get_spark_session(self):
         return SparkSession \
             .builder \
-            .appName(app_name) \
+            .appName(self.app_name) \
             .getOrCreate()
 
     def get_spark_context(self):
