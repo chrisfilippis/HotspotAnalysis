@@ -19,7 +19,8 @@ class SparkWrapper(object):
         if spark_session is None:
             spark_session = self.get_spark_session()
 
-        data_frame = spark_session.read.format(file_format) \
+        data_frame = spark_session.read\
+            .format(file_format) \
             .option("delimiter", delimiter) \
             .option("header", "true") \
             .load(path)
