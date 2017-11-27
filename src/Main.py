@@ -1,5 +1,7 @@
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import SparkSession
+from scipy.spatial import distance
+import pysal.esda
 from pyspark.sql import SQLContext
 from sklearn import preprocessing
 import operator
@@ -9,18 +11,18 @@ app_name = "Hot spot app"
 master = "local"
 
 
-def timestamp_to_minutes_batch(unix_timestamp, min_time, step):
+def minutes_batch(unix_timestamp, minTime, step):
     step_seconds = 60 * step
-    difference = unix_timestamp - min_time;
+    difference = unix_timestamp - minTime;
     return int(difference / step_seconds)
 
 
-def ceil_string_value(string_value, step):
-    return find_ceil_value(float(string_value), step)
+def ceil_val(lat, step):
+    return math.ceil(divide_val(lat, step))
 
 
-def find_ceil_value(lat, step):
-    return math.ceil(lat / step)
+def divide_val(lat, step):
+    return lat / step
 
 
 def get_spark_session():
@@ -40,6 +42,19 @@ def get_spark_context():
     configuration = get_spark_config()
     return SparkContext.getOrCreate(conf=configuration)
 
+
+def get_weight(point):
+    return distance.euclidean((0, 0, 0), point)
+
+
+def print_formatted(points_to_print, top=20, key=None):
+
+    if key is None:
+        for pri in points_to_print.top(top):
+            print pri
+    else:
+        for pri in points_to_print.top(top, key=key):
+            print pri
 
 # RDD.persists()
 # dic = wrapper.get_spark_context().parallelize(rdd)
@@ -73,22 +88,52 @@ initSource = sc.textFile(csv_file_path)\
 
 # .map(lambda s: (str(int(s[1])) + '_' + str(int(s[2])) + '_' + str(s[0]), 1)) \
 
-minTime = initSource \
-    .map(lambda s: (int(s[0]))) \
+# string: time, string: lat, string: lon, string: id
+source = initSource \
+    .map(lambda s: (int(s[0]), float(s[2]), float(s[3]), int(s[1])))
+
+# find the minimum date
+min_time = source \
+    .map(lambda s: (s[0])) \
     .min()
 
-structuredData = initSource \
-    .map(lambda s: (timestamp_to_minutes_batch(int(s[0]), minTime, step_time), ceil_string_value(s[2], step_lat), ceil_string_value(s[3], step_lon), int(s[1]))) \
+# find the number of cells
+number_of_cells = source.count()
 
-print "----------------"
-print minTime
+# int: time, int: lat, int: lon, float: xi, int: id
+structured_data = source \
+    .map(lambda s: (minutes_batch(s[0], min_time, step_time), divide_val(s[1], step_lat), divide_val(s[2], step_lon), s[3])) \
+    .map(lambda s: (s[0], s[1], int(math.ceil(s[1])), s[2], int(math.ceil(s[2])), s[3]))
 
-keyValueData = structuredData\
-    .map(lambda s: (str(int(s[1])) + '_' + str(int(s[2])) + '_' + str(s[0]), 1)) \
+# time, lat, lon, xi, id
+structured_weighted_data = structured_data\
+    .map(lambda s: (s[0], s[2], s[4], get_weight((s[0], s[1], s[3])), s[5])) \
+
+# number of points in 3D cells
+keyValue_data = structured_weighted_data\
+    .map(lambda s: (str(s[1]) + '_' + str(s[2]) + '_' + str(s[0]), 1)) \
     .reduceByKey(lambda a, b: a + b) \
     .filter(lambda x: x[1] > 1) \
 
-for i in keyValueData.top(200, key=lambda x: x[1]):
-    print i
+# calculate xi foreach cell
+keyValue_weighted_data = structured_weighted_data \
+    .map(lambda s: (str(s[1]) + '_' + str(s[2]) + '_' + str(s[0]), s[3])) \
+    .reduceByKey(lambda a, b: a + b) \
 
-print "csv"
+# calculate the sum of xi
+sum_x = keyValue_weighted_data.map(lambda s: s[1]).sum()
+
+# calculate X
+X = sum_x / number_of_cells
+
+# calculate the sum of xi^2
+sum_x2 = keyValue_weighted_data.map(lambda s: math.pow(s[1], 2)).sum()
+
+# calculate S
+S = math.sqrt((sum_x2 / number_of_cells) - math.pow(X, 2))
+
+print '------------------' + str(X)
+
+print_formatted(keyValue_data, 10)
+
+print_formatted(keyValue_weighted_data, 5, key=lambda x: x[1])
