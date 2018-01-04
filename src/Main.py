@@ -101,6 +101,16 @@ def get_direct_neighbor_ids(cell, t_min, t_max, ln_min, ln_max, lt_min, lt_max, 
     return result_tuples
 
 
+def get_getisord(cell, sumxi, n, large_x, large_s, t_min, t_max, ln_min, ln_max, lt_min, lt_max, cell_xi):
+
+    nci = get_direct_neighbor_ids(cell, t_min, t_max, ln_min, ln_max, lt_min, lt_max, cell_xi)
+
+    sqrt_val = ((n * nci) - math.pow(nci, 2)) / (n - 1)
+    gi = ((sumxi - cell_xi) - (large_x * nci)) / (large_s * math.sqrt(sqrt_val))
+
+    return cell, gi
+
+
 # places   degrees          distance
 # -------  -------          --------
 # 0        1                111  km
@@ -197,14 +207,20 @@ print '#### lat range       = ' + str(lat_min) + " / " + str(lat_max)
 print '#### time range      = ' + str(time_min) + " / " + str(time_max)
 print '########################'
 
-
-neighborRDD = keyValue_weighted_data\
-    .flatMap(lambda line: get_direct_neighbor_ids(line[0],  time_min, time_max, lon_min, lon_max, lat_min, lat_max, line[1])) \
+keyValue_with_neighbor_weights = keyValue_weighted_data\
+    .flatMap(lambda line: get_direct_neighbor_ids(line[0], time_min, time_max, lon_min, lon_max, lat_min, lat_max, line[1])) \
     .reduceByKey(lambda x, y: x + y)
 
-scoresRDD = neighborRDD
+print keyValue_weighted_data.takeOrdered(200,lambda x: x[0])
+print keyValue_with_neighbor_weights.takeOrdered(200,lambda x: x[0])
+# cell, sumxi, n, large_x, large_s, t_min, t_max, ln_min, ln_max, lt_min, lt_max, cell_xi
 
-print scoresRDD.top(1)
+getis_ord_keyValue = keyValue_with_neighbor_weights\
+    .map(lambda line: get_getisord(line[0], line[1], n, X, S, time_min, time_max, lon_min, lon_max, lat_min, lat_max, line[2]))
+
+neighborRDD = keyValue_weighted_data\
+    .flatMap(lambda line: get_direct_neighbor_ids(line[0], time_min, time_max, lon_min, lon_max, lat_min, lat_max, line[1])) \
+    .reduceByKey(lambda x, y: x + y)
 
 # print_formatted(keyValue_data, 10)
 # print_formatted(keyValue_weighted_data, 5, key=lambda x: x[1])
