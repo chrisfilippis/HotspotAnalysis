@@ -59,8 +59,8 @@ def print_formatted(points_to_print, top=20, key=None):
             print pri
 
 
-def transform_with_weight(s, min_tim):
-    f_trans = (minutes_batch(s[0], min_tim.value, step_time), divide_val(s[1], step_lat), divide_val(s[2], step_lon), s[3])
+def transform_with_weight(s, min_tim, time_step):
+    f_trans = (minutes_batch(s[0], min_tim.value, time_step), divide_val(s[1], step_lat), divide_val(s[2], step_lon), s[3])
     s_trans = (f_trans[0], f_trans[1], int(math.ceil(f_trans[1])), f_trans[2], int(math.ceil(f_trans[2])), f_trans[3])
     t_trans = (s_trans[0], s_trans[2], s_trans[4], get_weight((s_trans[0], s_trans[1], s_trans[3])), s_trans[5])
     return t_trans
@@ -128,7 +128,7 @@ sc = get_spark_context()
 sqlContext = SQLContext(sc)
 step_lat = 0.01
 step_lon = 0.01
-step_time = 10
+step_time = 120
 csv_file_path = "C:\Spark_Data\data.sample"
 # csv_file_path = "C:\Spark_Data\million_bigdata.sample"
 
@@ -151,7 +151,7 @@ broadcast_min_time = sc.broadcast(broad_time_min)
 
 # time, lat, lon, xi, id
 structured_weighted_data = source \
-    .map(lambda x: transform_with_weight(x, broadcast_min_time)) \
+    .map(lambda x: transform_with_weight(x, broadcast_min_time, step_time)) \
     .persist(StorageLevel.MEMORY_AND_DISK)
 
 # find the min / max longitude
@@ -224,8 +224,6 @@ getis_dataFrame = sqlContext.createDataFrame(getis_ord_keyValue, ['id', 'gi'])
 
 weight_dataFrame.limit(20).show()
 getis_dataFrame.sort(['gi'], ascending=[0]).limit(20).show()
-#getis_dataFrame.coalesce(1).saveAsTextFile("C:\Spark_Data\output.sample")
-getis_dataFrame.sort(['gi'], ascending=[0]).limit(20).coalesce(1).rdd.saveAsTextFile("C:\Spark_Data\output")
-
+# getis_dataFrame.sort(['gi'], ascending=[0]).limit(20).coalesce(1).rdd.saveAsTextFile("C:\Spark_Data\output")
 # print_formatted(keyValue_with_neighbor_weights, 20)
 # print_formatted(keyValue_data, 10)
