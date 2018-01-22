@@ -3,6 +3,7 @@ from pyspark.sql import SparkSession
 from pyspark import StorageLevel
 from scipy.spatial import distance
 import math as math
+from pyspark.sql import SQLContext
 import pysal.esda
 from pyspark.sql import SQLContext
 from sklearn import preprocessing
@@ -101,12 +102,12 @@ def get_direct_neighbor_ids(cell, t_min, t_max, ln_min, ln_max, lt_min, lt_max, 
     return result_tuples
 
 
-def get_getisord(cell, sumxi, n, large_x, large_s, t_min, t_max, ln_min, ln_max, lt_min, lt_max, cell_xi):
+def get_getisord(cell, sumxi, n, large_x, large_s, t_min, t_max, ln_min, ln_max, lt_min, lt_max):
 
-    nci = get_direct_neighbor_ids(cell, t_min, t_max, ln_min, ln_max, lt_min, lt_max, cell_xi)
+    nci = len(get_direct_neighbor_ids(cell, t_min, t_max, ln_min, ln_max, lt_min, lt_max, 0))
 
     sqrt_val = ((n * nci) - math.pow(nci, 2)) / (n - 1)
-    gi = ((sumxi - cell_xi) - (large_x * nci)) / (large_s * math.sqrt(sqrt_val))
+    gi = (sumxi - (large_x * nci)) / (large_s * math.sqrt(sqrt_val))
 
     return cell, gi
 
@@ -124,6 +125,7 @@ def get_getisord(cell, sumxi, n, large_x, large_s, t_min, t_max, ln_min, ln_max,
 # 8        0.00000001       1.11 mm
 
 sc = get_spark_context()
+sqlContext = SQLContext(sc)
 step_lat = 0.01
 step_lon = 0.01
 step_time = 10
@@ -146,7 +148,6 @@ broad_time_min = source\
      .map(lambda x: x[0]).min()
 
 broadcast_min_time = sc.broadcast(broad_time_min)
-print '>>>>>>>>>>>>>>>>>>' + str(broadcast_min_time.value)
 
 # time, lat, lon, xi, id
 structured_weighted_data = source \
@@ -172,6 +173,8 @@ keyValue_data = structured_weighted_data\
     .map(lambda x: (get_key(x), 1)) \
     .reduceByKey(lambda x, y: x + y) \
     .filter(lambda x: x[1] > 1) \
+
+print str(keyValue_data.count())
 
 # calculate xi foreach cell
 keyValue_weighted_data = structured_weighted_data \
@@ -211,16 +214,18 @@ keyValue_with_neighbor_weights = keyValue_weighted_data\
     .flatMap(lambda line: get_direct_neighbor_ids(line[0], time_min, time_max, lon_min, lon_max, lat_min, lat_max, line[1])) \
     .reduceByKey(lambda x, y: x + y)
 
-print keyValue_weighted_data.takeOrdered(200,lambda x: x[0])
-print keyValue_with_neighbor_weights.takeOrdered(200,lambda x: x[0])
-# cell, sumxi, n, large_x, large_s, t_min, t_max, ln_min, ln_max, lt_min, lt_max, cell_xi
-
+# cell, cell_xi, n, large_x, large_s, t_min, t_max, ln_min, ln_max, lt_min, lt_max, cell_xi
 getis_ord_keyValue = keyValue_with_neighbor_weights\
-    .map(lambda line: get_getisord(line[0], line[1], n, X, S, time_min, time_max, lon_min, lon_max, lat_min, lat_max, line[2]))
+    .map(lambda line: get_getisord(line[0], line[1], n, X, S, time_min, time_max, lon_min, lon_max, lat_min, lat_max))
 
-neighborRDD = keyValue_weighted_data\
-    .flatMap(lambda line: get_direct_neighbor_ids(line[0], time_min, time_max, lon_min, lon_max, lat_min, lat_max, line[1])) \
-    .reduceByKey(lambda x, y: x + y)
 
+weight_dataFrame = sqlContext.createDataFrame(keyValue_with_neighbor_weights, ['id', 'sumxi'])
+getis_dataFrame = sqlContext.createDataFrame(getis_ord_keyValue, ['id', 'gi'])
+
+weight_dataFrame.limit(20).show()
+getis_dataFrame.sort(['gi'], ascending=[0]).limit(20).show()
+#getis_dataFrame.coalesce(1).saveAsTextFile("C:\Spark_Data\output.sample")
+getis_dataFrame.sort(['gi'], ascending=[0]).limit(20).coalesce(1).rdd.saveAsTextFile("C:\Spark_Data\output")
+
+# print_formatted(keyValue_with_neighbor_weights, 20)
 # print_formatted(keyValue_data, 10)
-# print_formatted(keyValue_weighted_data, 5, key=lambda x: x[1])
