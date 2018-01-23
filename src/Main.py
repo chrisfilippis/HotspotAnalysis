@@ -130,6 +130,7 @@ step_lat = 0.01
 step_lon = 0.01
 step_time = 120
 csv_file_path = "C:\Spark_Data\data.sample"
+top_k = 20
 # csv_file_path = "C:\Spark_Data\million_bigdata.sample"
 
 acc_number_of_cells = sc.accumulator(0)
@@ -198,18 +199,6 @@ X = sum_x / number_of_cells
 # calculate S
 S = math.sqrt((sum_x2 / number_of_cells) - math.pow(X, 2))
 
-print '########################'
-print '#### number_of_cells = ' + str(number_of_cells)
-print '#### sum_x           = ' + str(sum_x)
-print '#### sum_x2          = ' + str(sum_x2)
-print '#### X               = ' + str(X)
-print '#### S               = ' + str(S)
-print '#### n               = ' + str(n)
-print '#### lon range       = ' + str(lon_min) + " / " + str(lon_max)
-print '#### lat range       = ' + str(lat_min) + " / " + str(lat_max)
-print '#### time range      = ' + str(time_min) + " / " + str(time_max)
-print '########################'
-
 keyValue_with_neighbor_weights = keyValue_weighted_data\
     .flatMap(lambda line: get_direct_neighbor_ids(line[0], time_min, time_max, lon_min, lon_max, lat_min, lat_max, line[1])) \
     .reduceByKey(lambda x, y: x + y)
@@ -222,8 +211,19 @@ getis_ord_keyValue = keyValue_with_neighbor_weights\
 weight_dataFrame = sqlContext.createDataFrame(keyValue_with_neighbor_weights, ['id', 'sumxi'])
 getis_dataFrame = sqlContext.createDataFrame(getis_ord_keyValue, ['id', 'gi'])
 
-weight_dataFrame.limit(20).show()
-getis_dataFrame.sort(['gi'], ascending=[0]).limit(20).show()
+print '########################'
+print '#### number_of_cells = ' + str(number_of_cells)
+print '#### sum_x           = ' + str(sum_x)
+print '#### sum_x2          = ' + str(sum_x2)
+print '#### X               = ' + str(X)
+print '#### S               = ' + str(S)
+print '#### n               = ' + str(n)
+print '#### lon range       = ' + str(lon_min) + " / " + str(lon_max)
+print '#### lat range       = ' + str(lat_min) + " / " + str(lat_max)
+print '#### time range      = ' + str(time_min) + " / " + str(time_max)
+print '########################'
+
+getis_dataFrame.sort(['gi'], ascending=[0]).limit(top_k).show()
 # getis_dataFrame.sort(['gi'], ascending=[0]).limit(20).coalesce(1).rdd.saveAsTextFile("C:\Spark_Data\output")
 # print_formatted(keyValue_with_neighbor_weights, 20)
 # print_formatted(keyValue_data, 10)
