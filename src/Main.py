@@ -37,7 +37,8 @@ def get_spark_config():
     return SparkConf()\
         .setAppName(app_name)\
         .setMaster(master) \
-        .set("spark.executor.cores", "4")
+        .set("spark.executor.cores", "4")\
+        .set("spark.driver.memory", "4g")
 
 
 def get_spark_context():
@@ -129,7 +130,7 @@ sqlContext = SQLContext(sc)
 step_lat = 0.01
 step_lon = 0.01
 step_time = 120
-csv_file_path = "C:\Spark_Data\data.sample"
+csv_file_path = "C:\Spark_Data\\bigdata.sample"
 top_k = 20
 # csv_file_path = "C:\Spark_Data\million_bigdata.sample"
 
@@ -223,7 +224,8 @@ print '#### lat range       = ' + str(lat_min) + " / " + str(lat_max)
 print '#### time range      = ' + str(time_min) + " / " + str(time_max)
 print '########################'
 
-getis_dataFrame.sort(['gi'], ascending=[0]).limit(top_k).show()
+getis_dataFrame.sort(['gi'], ascending=[0]).limit(1000).repartition(1).write.format("com.databricks.spark.csv").option("header", "true").save("C:\Spark_Data\output")
+# getis_dataFrame.sort(['gi'], ascending=[0]).limit(top_k).show()
 # getis_dataFrame.sort(['gi'], ascending=[0]).limit(20).coalesce(1).rdd.saveAsTextFile("C:\Spark_Data\output")
 # print_formatted(keyValue_with_neighbor_weights, 20)
 # print_formatted(keyValue_data, 10)
