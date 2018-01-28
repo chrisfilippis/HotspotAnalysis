@@ -4,9 +4,16 @@ from pyspark import StorageLevel
 from scipy.spatial import distance
 import math as math
 from pyspark.sql import SQLContext
+import gmplot
+from os import listdir
+import pandas
 
 app_name = "Hot spot app"
 master = "local[*]"
+
+
+def get_decimal(_text):
+    return int(_text) * 0.01
 
 
 def minutes_batch(unix_timestamp, min_t, step):
@@ -110,6 +117,39 @@ def get_getisord(cell, sumxi, n, large_x, large_s, t_min, t_max, ln_min, ln_max,
     return cell, gi
 
 
+def create_heatmap_from_points(latitudes, longitudes, html_path):
+
+    gmap = gmplot.GoogleMapPlotter(latitudes[0], longitudes[1], 5)
+
+    # gmap.plot(latitudes, longitudes, 'cornflowerblue', edge_width=10)
+    # gmap.scatter(latitudes, longitudes, '#3B0B39', size=40, marker=False)
+    # gmap.scatter(latitudes, longitudes, 'k', marker=True)
+    gmap.heatmap(latitudes, longitudes)
+    gmap.draw(html_path)
+
+
+def find_csvs_inpath(path_to_dir, suffix=".csv"):
+    filenames = listdir(path_to_dir)
+    return [filename for filename in filenames if filename.endswith(suffix)]
+
+
+def create_html_from_csv(path_to_dir):
+    file = path_to_dir + '\\' + find_csvs_inpath(path_to_dir)[0]
+
+    fields = ['id', 'gi']
+
+    data = pandas.read_csv(file, sep=',', header=1, names=fields)
+
+    latitudes = []
+    longitudes = []
+
+    for index, row in data.iterrows():
+        latitudes.append(get_decimal(row['id'].split('_')[1]))
+        longitudes.append(get_decimal(row['id'].split('_')[0]))
+
+    create_heatmap_from_points(latitudes, longitudes, path_to_dir + 'heatmap.html')
+
+
 # places   degrees          distance
 # -------  -------          --------
 # 0        1                111  km
@@ -127,8 +167,9 @@ sqlContext = SQLContext(sc)
 step_lat = 0.01
 step_lon = 0.01
 step_time = 120
-csv_file_path = "C:\Spark_Data\\bigdata.sample"
+csv_file_path = 'C:\Spark_Data\\data_test.sample'
 top_k = 15000
+result_path = 'C:\Users\cfilip09\Desktop\\test\output'
 # csv_file_path = "C:\Spark_Data\million_bigdata.sample"
 
 acc_number_of_cells = sc.accumulator(0)
@@ -219,4 +260,5 @@ print '#### lat range       = ' + str(lat_min) + " / " + str(lat_max)
 print '#### time range      = ' + str(time_min) + " / " + str(time_max)
 print '########################'
 
-getis_dataFrame.sort(['gi'], ascending=[0]).limit(1000).repartition(1).write.format("com.databricks.spark.csv").option("header", "true").save("C:\Spark_Data\output")
+getis_dataFrame.sort(['gi'], ascending=[0]).limit(top_k).repartition(1).write.format("com.databricks.spark.csv").option("header", "true").save(result_path)
+create_html_from_csv(result_path)

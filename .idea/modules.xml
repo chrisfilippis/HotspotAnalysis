@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/HotspotAnalysis.iml" filepath="$PROJECT_DIR$/.idea/HotspotAnalysis.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../mbSGD/.idea/mbSGD.iml" filepath="$PROJECT_DIR$/../mbSGD/.idea/mbSGD.iml" />
     </modules>
   </component>
 </project>
