@@ -1,26 +1,56 @@
-def get_direct_neighbor_ids(cell, t_min, t_max, ln_min, ln_max, lt_min, lt_max, cell_xi):
-    key_parts = cell.split("_")
-    lat, lon, time = int(key_parts[0]), int(key_parts[1]), int(key_parts[2])
-    result_tuples = []
+import pandas
+import gmplot
 
-    lat_from = lat if lt_min == lat else lat - 1
-    lat_to = lat if lt_max == lat else lat + 1
-
-    lon_from = lon if ln_min == lon else lon - 1
-    lon_to = lon if ln_max == lon else lon + 1
-
-    time_from = time if t_min == time else time - 1
-    time_to = time if t_max == time else time + 1
-
-    for x in xrange(lat_from, lat_to + 1):
-        for y in xrange(lon_from, lon_to + 1):
-            for z in xrange(time_from, time_to + 1):
-                if not (lat == x and lon == y and time == z):
-                    result_tuples.append((str(x) + "_" + str(y) + "_" + str(z), cell_xi))
-
-    return result_tuples
+def get_decimal(_text):
+    return int(_text) * 0.01
 
 
-point = "5_4_5"
-print get_direct_neighbor_ids(point, 1, 5, 1, 5, 1, 5, 55)
-print len(get_direct_neighbor_ids(point, 1, 5, 1, 5, 1, 5, 55))
+def create_heatmap(path, html_path):
+    fields = ['point', 'gi']
+
+    data = pandas.read_csv(path, sep=',', header=None, names=fields)
+
+    latitudes = []
+    longitudes = []
+
+    for index, row in data.iterrows():
+        latitudes.append(get_decimal(row['point'].split('_')[1]))
+        longitudes.append(get_decimal(row['point'].split('_')[0]))
+
+    print latitudes
+    print longitudes
+
+    gmap = gmplot.GoogleMapPlotter(latitudes[0], longitudes[1], 5)
+
+    # gmap.plot(latitudes, longitudes, 'cornflowerblue', edge_width=10)
+    gmap.scatter(latitudes, longitudes, '#3B0B39', size=40, marker=False)
+    # gmap.scatter(latitudes, longitudes, 'k', marker=True)
+    # gmap.heatmap(latitudes, longitudes)
+    gmap.draw(html_path)
+
+
+def create_testheatmap(path, html_path):
+    fields = ['t', 'tt', 'lon', 'lat']
+
+    data = pandas.read_csv('C:\Spark_Data\\10K_bigdata.sample', sep=' ', header=None, names=fields)
+
+    latitudes = []
+    longitudes = []
+
+    for index, row in data.iterrows():
+        latitudes.append(row['lat'])
+        longitudes.append(row['lon'])
+
+    print data
+
+    gmap = gmplot.GoogleMapPlotter(latitudes[0], longitudes[1], 5)
+
+    gmap.plot(latitudes, longitudes, 'cornflowerblue', edge_width=10)
+    # gmap.scatter(latitudes, longitudes, '#3B0B39', size=40, marker=False)
+    # gmap.scatter(latitudes, longitudes, 'k', marker=True)
+    gmap.heatmap(latitudes, longitudes)
+    gmap.draw(html_path)
+
+
+# create_testheatmap('C:\Spark_Data\output\data_out.csv', 'mymap.html')
+create_heatmap('C:\Spark_Data\output\data_out.csv', 'mymap.html')

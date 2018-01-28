@@ -4,9 +4,6 @@ from pyspark import StorageLevel
 from scipy.spatial import distance
 import math as math
 from pyspark.sql import SQLContext
-import pysal.esda
-from pyspark.sql import SQLContext
-from sklearn import preprocessing
 
 app_name = "Hot spot app"
 master = "local[*]"
@@ -131,7 +128,7 @@ step_lat = 0.01
 step_lon = 0.01
 step_time = 120
 csv_file_path = "C:\Spark_Data\\bigdata.sample"
-top_k = 20
+top_k = 15000
 # csv_file_path = "C:\Spark_Data\million_bigdata.sample"
 
 acc_number_of_cells = sc.accumulator(0)
@@ -175,8 +172,6 @@ keyValue_data = structured_weighted_data\
     .map(lambda x: (get_key(x), 1)) \
     .reduceByKey(lambda x, y: x + y) \
     .filter(lambda x: x[1] > 1) \
-
-print str(keyValue_data.count())
 
 # calculate xi foreach cell
 keyValue_weighted_data = structured_weighted_data \
@@ -225,7 +220,3 @@ print '#### time range      = ' + str(time_min) + " / " + str(time_max)
 print '########################'
 
 getis_dataFrame.sort(['gi'], ascending=[0]).limit(1000).repartition(1).write.format("com.databricks.spark.csv").option("header", "true").save("C:\Spark_Data\output")
-# getis_dataFrame.sort(['gi'], ascending=[0]).limit(top_k).show()
-# getis_dataFrame.sort(['gi'], ascending=[0]).limit(20).coalesce(1).rdd.saveAsTextFile("C:\Spark_Data\output")
-# print_formatted(keyValue_with_neighbor_weights, 20)
-# print_formatted(keyValue_data, 10)
