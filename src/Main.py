@@ -12,13 +12,13 @@ app_name = "Hot spot app"
 master = "local[*]"
 
 
-def get_decimal(_text):
-    return int(_text) * 0.01
+def get_decimal(_text, step_value):
+    return int(_text) * step_value
 
 
 def minutes_batch(unix_timestamp, min_t, step):
     step_seconds = 60 * step
-    difference = unix_timestamp - min_t;
+    difference = unix_timestamp - min_t
     return int(difference / step_seconds)
 
 
@@ -144,8 +144,8 @@ def create_html_from_csv(path_to_dir):
     longitudes = []
 
     for index, row in data.iterrows():
-        latitudes.append(get_decimal(row['id'].split('_')[1]))
-        longitudes.append(get_decimal(row['id'].split('_')[0]))
+        latitudes.append(get_decimal(row['id'].split('_')[1], step_lat))
+        longitudes.append(get_decimal(row['id'].split('_')[0], step_lon))
 
     create_heatmap_from_points(latitudes, longitudes, path_to_dir + 'heatmap.html')
 
@@ -169,7 +169,7 @@ step_lon = 0.01
 step_time = 120
 csv_file_path = 'C:\Spark_Data\\data_test.sample'
 top_k = 15000
-result_path = 'C:\Users\cfilip09\Desktop\\test\output'
+result_path = 'C:\Spark_Data\\results'
 # csv_file_path = "C:\Spark_Data\million_bigdata.sample"
 
 acc_number_of_cells = sc.accumulator(0)
