@@ -206,7 +206,7 @@ lat_range = lat_max - lat_min
 time_min, time_max = get_min_max(structured_weighted_data, 0)
 time_range = time_max - time_min
 
-n = lat_range * lat_range * time_range
+n = lat_range * lon_range * time_range
 
 # number of points in 3D cells
 keyValue_data = structured_weighted_data\
@@ -249,15 +249,15 @@ weight_dataFrame = sqlContext.createDataFrame(keyValue_with_neighbor_weights, ['
 getis_dataFrame = sqlContext.createDataFrame(getis_ord_keyValue, ['id', 'gi'])
 
 print '########################'
-print '#### number_of_cells = ' + str(number_of_cells)
-print '#### sum_x           = ' + str(sum_x)
-print '#### sum_x2          = ' + str(sum_x2)
-print '#### X               = ' + str(X)
-print '#### S               = ' + str(S)
-print '#### n               = ' + str(n)
-print '#### lon range       = ' + str(lon_min) + " / " + str(lon_max)
-print '#### lat range       = ' + str(lat_min) + " / " + str(lat_max)
-print '#### time range      = ' + str(time_min) + " / " + str(time_max)
+print '#### number_of_cells  = ' + str(number_of_cells)
+print '#### sum_x            = ' + str(sum_x)
+print '#### sum_x2           = ' + str(sum_x2)
+print '#### X                = ' + str(X)
+print '#### S                = ' + str(S)
+print '#### n                = ' + str(n)
+print '#### lon range        = ' + str(lon_min) + " / " + str(lon_max)
+print '#### lat range        = ' + str(lat_min) + " / " + str(lat_max)
+print '#### time range       = ' + str(time_min) + " / " + str(time_max)
 print '########################'
 
 getis_dataFrame.sort(['gi'], ascending=[0]).limit(top_k).repartition(1).write.format("com.databricks.spark.csv").option("header", "true").save(result_path)
