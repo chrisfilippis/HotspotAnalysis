@@ -231,10 +231,10 @@ sum_x = acc_sum_x.value
 sum_x2 = acc_sum_x2.value
 
 # calculate X
-X = sum_x / number_of_cells
+X = sum_x / n
 
 # calculate S
-S = math.sqrt((sum_x2 / number_of_cells) - math.pow(X, 2))
+S = math.sqrt((sum_x2 / n) - math.pow(X, 2))
 
 keyValue_with_neighbor_weights = keyValue_weighted_data\
     .flatMap(lambda line: get_direct_neighbor_ids(line[0], time_min, time_max, lon_min, lon_max, lat_min, lat_max, line[1])) \
